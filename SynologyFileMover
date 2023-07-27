@@ -8,7 +8,7 @@ public class SynologyFileMover {
 
 // Todo Add Synology location and then username and password
 
-    private static final String SYNOLOGY_API_URL_1 = "https://api.synology.com/";
+    private static final String SYNOLOGY_API_URL_1 = "192.168.1.96:5010";
     private static final String SYNOLOGY_API_URL_2 = "https://api.synology.com/";
     private static final String INITIAL_LOCATION = "/volume1/videos/";
     private static final String NEW_LOCATION = "/volume2/videos/";
@@ -33,8 +33,8 @@ public class SynologyFileMover {
 
     public static void main(String[] args) throws IOException {
         // Get the Synology tokens.
-        String synologyToken1 = getSynologyToken(SYNOLOGY_API_URL_1, "username", "password");
-        String synologyToken2 = getSynologyToken(SYNOLOGY_API_URL_2, "username", "password");
+        String synologyToken1 = getSynologyToken(SYNOLOGY_API_URL_1, "ChrisAdmin", "M@rk5609");
+        String synologyToken2 = getSynologyToken(SYNOLOGY_API_URL_2, "ChrisAdmin", "M@rk5609");
         System.out.println("Got token 1: " + synologyToken1);
         System.out.println("Got token 2: " + synologyToken2);
 
