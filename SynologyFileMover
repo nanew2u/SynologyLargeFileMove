@@ -1,0 +1,117 @@
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
+public class SynologyFileMover {
+
+// Todo Add Synology location and then username and password
+
+    private static final String SYNOLOGY_API_URL_1 = "https://api.synology.com/";
+    private static final String SYNOLOGY_API_URL_2 = "https://api.synology.com/";
+    private static final String INITIAL_LOCATION = "/volume1/videos/";
+    private static final String NEW_LOCATION = "/volume2/videos/";
+
+    private static String getSynologyToken(String synologyAPIURL, String username, String password) throws IOException {
+        URL url = new URL(synologyAPIURL + "/auth/getToken");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
+        connection.setRequestProperty("X-Syno-Username", username);
+        connection.setRequestProperty("X-Syno-Password", password);
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            throw new IOException("Failed to get token: " + responseCode);
+        }
+
+        String responseBody = connection.getInputStream().toString();
+        System.out.println("Got token: " + responseBody);
+        return responseBody.split("=")[1];
+    }
+
+    public static void main(String[] args) throws IOException {
+        // Get the Synology tokens.
+        String synologyToken1 = getSynologyToken(SYNOLOGY_API_URL_1, "username", "password");
+        String synologyToken2 = getSynologyToken(SYNOLOGY_API_URL_2, "username", "password");
+        System.out.println("Got token 1: " + synologyToken1);
+        System.out.println("Got token 2: " + synologyToken2);
+
+        // Find a file over 1 GB in the initial location.
+        File file = findFileOver1GB(SYNOLOGY_API_URL_1, INITIAL_LOCATION, synologyToken1);
+        System.out.println("Found file: " + file.getName());
+
+        // Move the file to the new location.
+        moveFile(file, SYNOLOGY_API_URL_2, NEW_LOCATION, synologyToken2);
+        System.out.println("Moved file to: " + NEW_LOCATION);
+
+        // Create a link to the new location using the new location Synology API.
+        String link = createLink(SYNOLOGY_API_URL_2, NEW_LOCATION, synologyToken2);
+        System.out.println("Created link: " + link);
+
+        // Save the link as a PDF document in the initial location.
+        saveLinkAsPDF(link, SYNOLOGY_API_URL_1, INITIAL_LOCATION, synologyToken1);
+        System.out.println("Saved link as PDF");
+    }
+
+    private static File findFileOver1GB(String synologyAPIURL, String location, String synologyToken) throws IOException {
+        URL url = new URL(synologyAPIURL + "/fileStation/resources?path=" + location);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("X-Syno-Token", synologyToken);
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            throw new IOException("Failed to get file list: " + responseCode);
+        }
+
+        String responseBody = connection.getInputStream().toString();
+        System.out.println("Got file list: " + responseBody);
+        return File.parseJSON(responseBody).findFileOver1GB();
+    }
+    
+        private static void moveFile(File file, String synologyAPIURL, String newLocation, String synologyToken) throws IOException {
+        URL url = new URL(synologyAPIURL + "/fileStation/move?path=" + file.getPath() + "&dest=" + newLocation);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("X-Syno-Token", synologyToken);
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            throw new IOException("Failed to move file: " + responseCode);
+        }
+
+        System.out.println("File moved successfully");
+    }
+    
+        private static String createLink(String synologyAPIURL, String location, String synologyToken) throws IOException {
+        URL url = new URL(synologyAPIURL + "/fileStation/createLink?path=" + location);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("X-Syno-Token", synologyToken);
+        connection.setRequestProperty("X-Requested-With", "XMLHttpRequest");
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode != 200) {
+            throw new IOException("Failed to create link: " + responseCode);
+        }
+
+        String responseBody = connection.getInputStream().toString();
+        System.out.println("Got link response: " + responseBody);
+        return responseBody.split("=")[1];
+    }
+    
+        private static void saveLinkAsPDF(String link, String synologyAPIURL, String location, String synologyToken) throws IOException {
+        PrintWriter writer = new PrintWriter(new File(location + "/link.pdf"));
+        writer.println(link);
+        writer.close();
+
+        System.out.println("Link saved as PDF");
+    }
+    
+}
+
+
